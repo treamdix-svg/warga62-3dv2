@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { world, PLAYER_COLORS, formatRupiah } from '../engine/GameBridge.js';
+import { MeshBuilder, vertexMaterial } from '../world/MeshBuilder.js';
 
 const SKINS = [0xffd1a3, 0xe8b089, 0xc68a5b, 0x9a6a43, 0xf2c9a0, 0xd9a273, 0xb57d52, 0xf6d3b3];
 const PANTS = [0x2f3d5c, 0x3a3a46, 0x4b5d3a, 0x5b3a2e, 0x2b4a5e, 0x40355c];
 const WALK_SPEED = 13;      // satuan dunia / detik
-const box = new THREE.BoxGeometry(1, 1, 1);
+const AVATAR_MAT = vertexMaterial({ flatShading: false, roughness: 0.72 });
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const shortName = (n) => (n.length > 14 ? n.slice(0, 13) + '…' : n);
 
@@ -77,31 +78,25 @@ export class Avatars3D {
     const root = new THREE.Group();     // posisi dunia
     const body = new THREE.Group();     // dapat meloncat / membungkuk
     root.add(body);
-    const mShirt = new THREE.MeshStandardMaterial({ color: color.color, roughness: 0.7 });
-    const mSkin = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.75 });
-    const mPants = new THREE.MeshStandardMaterial({ color: pants, roughness: 0.8 });
-    const mShoe = new THREE.MeshStandardMaterial({ color: 0x20252e, roughness: 0.9 });
-    const part = (parent, mat, w, h, d, x, y, z) => {
-      const m = new THREE.Mesh(box, mat); m.scale.set(w, h, d); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m;
-    };
-    // Kaki (pivot di pinggul)
+    // Semua bagian memakai satu material vertex-color; tiap bagian (kaki, lengan, badan, kepala, topi) = 1 mesh.
+    const limb = (build) => { const b = new MeshBuilder(); build(b); const m = new THREE.Mesh(b.build(), AVATAR_MAT); m.castShadow = true; return m; };
     const legL = new THREE.Group(), legR = new THREE.Group();
     legL.position.set(-0.36, 1.05, 0); legR.position.set(0.36, 1.05, 0);
-    for (const leg of [legL, legR]) { part(leg, mPants, 0.62, 0.8, 0.66, 0, -0.4, 0); part(leg, mShoe, 0.66, 0.26, 0.78, 0, -0.93, 0.06); body.add(leg); }
-    // Badan
-    const torso = part(body, mShirt, 1.45, 1.25, 0.75, 0, 1.68, 0);
-    part(body, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), 1.47, 0.14, 0.77, 0, 1.2, 0);      // sabuk
-    part(body, new THREE.MeshStandardMaterial({ color: 0xffd23f, roughness: 0.5 }), 0.3, 0.3, 0.05, 0, 1.78, 0.39);    // lencana
-    // Lengan (pivot di bahu)
+    for (const leg of [legL, legR]) { leg.add(limb((b) => { b.box(0.62, 0.8, 0.66, pants, 0, -0.8, 0); b.box(0.66, 0.26, 0.78, 0x20252e, 0, -1.06, 0.06); })); body.add(leg); }
+    body.add(limb((b) => {
+      b.box(1.45, 1.25, 0.75, color.color, 0, 1.055, 0);
+      b.box(1.47, 0.14, 0.77, 0xffffff, 0, 1.13, 0);             // sabuk
+      b.box(0.3, 0.3, 0.05, 0xffd23f, 0, 1.63, 0.39);            // lencana
+    }));
     const armL = new THREE.Group(), armR = new THREE.Group();
     armL.position.set(-1.0, 2.2, 0); armR.position.set(1.0, 2.2, 0);
-    for (const arm of [armL, armR]) { part(arm, mShirt, 0.5, 0.5, 0.58, 0, -0.25, 0); part(arm, mSkin, 0.46, 0.78, 0.54, 0, -0.9, 0); body.add(arm); }
-    // Kepala dengan wajah ceria
+    for (const arm of [armL, armR]) { arm.add(limb((b) => { b.box(0.5, 0.5, 0.58, color.color, 0, -0.5, 0); b.box(0.46, 0.78, 0.54, skin, 0, -1.29, 0); })); body.add(arm); }
+    // Kepala dengan wajah ceria (tekstur) + aksesori khas
+    const mSkin = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.75 });
     const faceMat = new THREE.MeshStandardMaterial({ map: this.faceTexture(skin), roughness: 0.7 });
-    const headGeo = new THREE.BoxGeometry(1.05, 1.0, 1.0);
-    const head = new THREE.Mesh(headGeo, [mSkin, mSkin, mSkin, mSkin, faceMat, mSkin]);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.0, 1.0), [mSkin, mSkin, mSkin, mSkin, faceMat, mSkin]);
     head.position.set(0, 2.85, 0); head.castShadow = true; body.add(head);
-    this.addAccessory(body, idx, color, head);
+    body.add(limb((b) => this.accessory(b, idx, color)));
     // Cincin pembeda warna di tanah + penunjuk giliran
     const ring = new THREE.Mesh(this.ringGeo, new THREE.MeshBasicMaterial({ color: color.color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; root.add(ring);
@@ -113,43 +108,25 @@ export class Avatars3D {
     this.drawTag(tag, player.money, player.out);
     this.group.add(root);
     const start = world.tiles[player.pos || 0];
-    root.position.set(start.x, start.y, start.z);
+    root.position.set(start.x, start.y + world.WALK_Y, start.z);
     return {
       id: player.id, idx, root, body, legL, legR, armL, armR, head, ring, arrow, beam, tag,
       tile: player.pos || 0, walking: false, phase: Math.random() * 6, yaw: Math.atan2(start.tx, start.tz),
-      walk: null, jumpT: -1, cheerT: -1, scaleT: -1, scaleFrom: 1, pending: null, hop: 0, slot: new THREE.Vector3(start.x, start.y, start.z),
+      walk: null, jumpT: -1, cheerT: -1, pending: null, slot: new THREE.Vector3(start.x, start.y, start.z),
     };
   }
 
-  addAccessory(body, idx, color, head) {
-    const m = (c, rough = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: rough });
-    const add = (geo, mat, x, y, z) => { const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x, y, z); mesh.castShadow = true; body.add(mesh); return mesh; };
+  // Aksesori pembeda tiap pemain (peci, topi, caping, ikat kepala, helm, kuncir, kupluk, mahkota).
+  accessory(b, idx, color) {
     const kind = idx % 8;
-    if (kind === 0) {           // peci hitam
-      add(new THREE.CylinderGeometry(0.5, 0.55, 0.45, 14), m(0x1b1b1f), 0, 3.5, 0);
-      add(new THREE.BoxGeometry(1.08, 0.2, 1.04), m(0x1b1b1f), 0, 3.4, 0);
-    } else if (kind === 1) {    // topi baseball
-      add(new THREE.CylinderGeometry(0.55, 0.58, 0.4, 14, 1, false, 0, Math.PI * 2), m(color.color), 0, 3.5, 0);
-      add(new THREE.BoxGeometry(0.9, 0.08, 0.7), m(color.color), 0, 3.35, 0.7);
-    } else if (kind === 2) {    // caping petani
-      add(new THREE.ConeGeometry(1.35, 0.7, 14), m(0xe6c27a, 0.95), 0, 3.6, 0);
-    } else if (kind === 3) {    // ikat kepala + rambut
-      add(new THREE.BoxGeometry(1.1, 0.35, 1.06), m(0x2b1b14), 0, 3.5, -0.02);
-      add(new THREE.BoxGeometry(1.1, 0.16, 1.08), m(0xdc2626), 0, 3.3, 0);
-    } else if (kind === 4) {    // helm proyek
-      add(new THREE.SphereGeometry(0.62, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), m(0xffc107, 0.4), 0, 3.35, 0);
-      add(new THREE.BoxGeometry(0.9, 0.08, 0.5), m(0xffc107, 0.4), 0, 3.35, 0.62);
-    } else if (kind === 5) {    // kuncir
-      add(new THREE.BoxGeometry(1.1, 0.35, 1.08), m(0x3a2418), 0, 3.5, -0.02);
-      add(new THREE.SphereGeometry(0.28, 10, 8), m(0x3a2418), 0, 3.35, -0.62);
-      add(new THREE.BoxGeometry(0.12, 0.55, 0.12), m(0x3a2418), 0, 3.0, -0.66);
-    } else if (kind === 6) {    // kupluk
-      add(new THREE.SphereGeometry(0.58, 12, 8, 0, Math.PI * 2, 0, Math.PI / 1.7), m(color.color, 0.95), 0, 3.38, 0);
-      add(new THREE.SphereGeometry(0.17, 8, 6), m(0xffffff), 0, 3.95, 0);
-    } else {                    // mahkota kecil
-      add(new THREE.CylinderGeometry(0.5, 0.45, 0.3, 8), m(0xffc933, 0.3), 0, 3.45, 0);
-      for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; add(new THREE.ConeGeometry(0.1, 0.3, 4), m(0xffe066, 0.3), Math.cos(a) * 0.42, 3.7, Math.sin(a) * 0.42); }
-    }
+    if (kind === 0) { b.cyl(0.5, 0.55, 0.45, 14, 0x1b1b1f, 0, 3.275, 0); b.box(1.08, 0.2, 1.04, 0x1b1b1f, 0, 3.3, 0); }
+    else if (kind === 1) { b.cyl(0.55, 0.58, 0.4, 14, color.color, 0, 3.3, 0); b.box(0.9, 0.08, 0.7, color.color, 0, 3.31, 0.7); }
+    else if (kind === 2) b.cone(1.35, 0.7, 14, 0xe6c27a, 0, 3.25, 0);
+    else if (kind === 3) { b.box(1.1, 0.35, 1.06, 0x2b1b14, 0, 3.325, -0.02); b.box(1.1, 0.16, 1.08, 0xdc2626, 0, 3.22, 0); }
+    else if (kind === 4) { b.sphere(0.62, 0xffc107, 0, 2.73, 0, { sy: 0.75 }); b.box(0.9, 0.08, 0.5, 0xffc107, 0, 3.32, 0.62); }
+    else if (kind === 5) { b.box(1.1, 0.35, 1.08, 0x3a2418, 0, 3.325, -0.02); b.sphere(0.28, 0x3a2418, 0, 3.07, -0.62); b.box(0.12, 0.55, 0.12, 0x3a2418, 0, 2.72, -0.66); }
+    else if (kind === 6) { b.sphere(0.58, color.color, 0, 2.8, 0, { sy: 0.8 }); b.sphere(0.17, 0xffffff, 0, 3.78, 0); }
+    else { b.cyl(0.5, 0.45, 0.3, 8, 0xffc933, 0, 3.3, 0); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; b.cone(0.1, 0.3, 4, 0xffe066, Math.cos(a) * 0.42, 3.55, Math.sin(a) * 0.42); } }
   }
 
   // Lokasi berdiri tiap pemain pada sebuah petak (dibagi rata agar tidak bertumpuk).
@@ -162,7 +139,7 @@ export class Avatars3D {
       const radius = Math.min(1.6, 0.6 + n * 0.17), a = (k / n) * Math.PI * 2 + 0.6;
       lat = Math.cos(a) * radius; lon = Math.sin(a) * radius;
     }
-    return new THREE.Vector3(t.x + (-t.tz) * lat + t.tx * lon, t.y + 0.1, t.z + t.tx * lat + t.tz * lon);
+    return new THREE.Vector3(t.x + (-t.tz) * lat + t.tx * lon, t.y + world.WALK_Y, t.z + t.tx * lat + t.tz * lon);
   }
 
   walk(idx, fromTile, toTile, onDone) {
@@ -203,6 +180,11 @@ export class Avatars3D {
   }
 
   update(dt, time, camera) {
+    // Peringkat tumpukan label per petak (pemain aktif selalu paling atas).
+    const byTile = new Map();
+    for (const p of this.pawns) if (!p.hidden) { const t = p.walk ? -1 - p.idx : p.tile; (byTile.get(t) || byTile.set(t, []).get(t)).push(p); }
+    this.tagRank = {};
+    for (const list of byTile.values()) { list.sort((a, b) => (a.idx === this.activeIdx ? 1 : 0) - (b.idx === this.activeIdx ? 1 : 0) || a.idx - b.idx); list.forEach((p, i) => { this.tagRank[p.idx] = i; }); }
     for (const p of this.pawns) {
       const root = p.root;
       let moving = false;
@@ -216,7 +198,7 @@ export class Avatars3D {
         const pt = world.pointAtS(w.s0 + w.dist, this.tmp);
         // Kehadiran lateral kecil supaya tiap pemain tidak berjalan di garis yang sama persis.
         const lane = ((p.idx % 5) - 2) * 0.36;
-        root.position.set(pt.x - pt.tz * lane, pt.y + 0.1, pt.z + pt.tx * lane);
+        root.position.set(pt.x - pt.tz * lane, pt.y + world.WALK_Y, pt.z + pt.tx * lane);
         const yawT = Math.atan2(pt.tx, pt.tz);
         p.yaw += Math.atan2(Math.sin(yawT - p.yaw), Math.cos(yawT - p.yaw)) * Math.min(1, dt * 12);
         moving = true;
@@ -270,9 +252,13 @@ export class Avatars3D {
       p.root.rotation.y = 0;
       if (camera) {
         const d = camera.position.distanceTo(p.root.position);
-        const k = Math.min(2.4, Math.max(0.5, d / 30));
+        const small = innerWidth < 600 ? 0.72 : 1;
+        const active = p.idx === this.activeIdx;
+        p.tag.visible = active && !p.hidden;
+        const k = Math.min(2.4, Math.max(0.5, d / 30)) * small * (active ? 1 : 0.8);
         p.tag.scale.set(4.4 * k, 1.375 * k, 1);
-        p.tag.position.y = 4.4 + Math.min(2.5, k * 0.9);
+        // Pion yang berbagi petak: label ditumpuk ke atas supaya tidak saling menutupi.
+        p.tag.position.y = 4.4 + Math.min(2.5, k * 0.9) + (this.tagRank?.[p.idx] || 0) * 1.5 * k;
       }
       // Penunjuk giliran
       if (p.arrow.visible) {

@@ -76,10 +76,10 @@ class Warga62App {
     const s = this.scene;
     this.env = new Environment3D(s, quality);
     this.terrain = new Terrain3D(s, world, quality);
-    this.roads = new Roads3D(s, world);
+    this.roads = new Roads3D(s, world, this.renderer);
     this.scenery = new Scenery3D(s, world, quality);
     this.heroes = new Heroes3D(s);
-    this.markers = new TileMarkers3D(s, quality);
+    this.markers = new TileMarkers3D(s, quality, this.roads);
     this.buildings = new Buildings3D(s);
     this.avatars = new Avatars3D(s, quality);
     this.dice = new Dice3D(s);
@@ -126,10 +126,16 @@ class Warga62App {
     this.cameraCtl.setMode('follow', false);
     const p = this.avatars.position(this.state.turn);
     this.cameraCtl.followPos.copy(p).y += 2;
-    this.cameraCtl.followYaw = null;
+    this.cameraCtl.followYaw = this.roadYaw(this.avatars.pawns[this.state.turn]);
     this.cameraCtl.flyTo(this.cameraCtl.presetOffset('follow', this.cameraCtl.followPos), 1.6);
     this.hud.hideDice();
     this.hud.toast(`Giliran pertama: ${this.state.players[this.state.turn].name}`);
+  }
+
+  // Arah jalan di petak pemain: kamera ikuti menempatkan diri di belakang pion menghadap arah jalan.
+  roadYaw(pawn) {
+    const t = world.tiles[pawn?.tile ?? 0];
+    return Math.atan2(t.tx, t.tz);
   }
 
   snapshot() {
@@ -227,6 +233,7 @@ class Warga62App {
         const far = pos.distanceTo(this.cameraCtl.followPos);
         if (far > 18 && (this.cameraCtl.mode === 'follow' || this.cameraCtl.mode === 'iso')) {
           this.cameraCtl.followPos.copy(pos).y += 2;
+          this.cameraCtl.followYaw = this.roadYaw(this.avatars.pawns[s.turn]);
           this.cameraCtl.flyTo(this.cameraCtl.presetOffset(this.cameraCtl.mode, this.cameraCtl.followPos), 1.2);
         }
       }

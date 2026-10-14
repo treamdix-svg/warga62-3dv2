@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { engine, world, playerColorOf } from '../engine/GameBridge.js';
 import { MeshBuilder, vertexMaterial } from '../world/MeshBuilder.js';
 import * as P from '../world/Prefabs.js';
+import { tileColorHex } from './tileStyle.js';
 
 const mat = vertexMaterial();
 const easeOutBack = (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
@@ -13,6 +14,7 @@ export class Buildings3D {
     this.scene = scene;
     this.group = new THREE.Group(); scene.add(this.group);
     this.lots = {};
+    this.islandHex = {};
     this.pop = [];
     this.onBuilt = null;
     for (let i = 0; i < 45; i++) {
@@ -22,14 +24,15 @@ export class Buildings3D {
       g.position.set(lot.x, lot.y, lot.z); g.rotation.y = lot.rotationY;
       this.group.add(g);
       this.lots[i] = { g, key: null, mesh: null };
+      this.islandHex[i] = new THREE.Color(tileColorHex(i)).getHex();
     }
   }
 
-  build(owner, level, road) {
+  build(owner, level, road, islandHex = 0xffffff) {
     const b = new MeshBuilder();
     const color = owner === undefined ? null : (owner === 'state' ? { color: 0x64748b } : playerColorOf(owner));
     const hex = color ? color.color : 0xffffff;
-    const W = 7.2, D = 5.4;
+    const W = 6.3, D = 5.2;
     if (road) {
       b.box(W, 0.3, D, 0x59606a, 0, -0.1, 0);
       b.box(W, 0.02, 0.18, 0xf4d34a, 0, 0.2, 0);
@@ -41,9 +44,11 @@ export class Buildings3D {
       // Tanah kosong: lahan tanah merah + patok + tali pembatas
       b.box(W, 0.45, D, 0xc9a56f, 0, -0.3, 0);
       b.box(W - 0.5, 0.05, D - 0.5, 0xd8b883, 0, 0.14, 0);
-      for (const [x, z] of [[-3.3, -2.4], [3.3, -2.4], [-3.3, 2.4], [3.3, 2.4]]) P.stake(b, x, z, 0xffffff);
-      for (const z of [-2.4, 2.4]) b.box(6.6, 0.04, 0.04, 0xf5f0e2, 0, 0.75, z);
-      for (const x of [-3.3, 3.3]) b.box(0.04, 0.04, 4.8, 0xf5f0e2, x, 0.75, 0);
+      // bingkai persil berwarna pulau agar jelas bahwa ini tanah milik petak tersebut
+      b.box(W, 0.22, 0.18, islandHex, 0, 0.1, D / 2 - 0.09); b.box(W, 0.22, 0.18, islandHex, 0, 0.1, -D / 2 + 0.09); b.box(0.18, 0.22, D, islandHex, W / 2 - 0.09, 0.1, 0); b.box(0.18, 0.22, D, islandHex, -W / 2 + 0.09, 0.1, 0);
+      for (const [x, z] of [[-3.0, -2.2], [3.0, -2.2], [-3.0, 2.2], [3.0, 2.2]]) P.stake(b, x, z, islandHex);
+      for (const z of [-2.2, 2.2]) b.box(6.0, 0.04, 0.04, 0xf5f0e2, 0, 0.75, z);
+      for (const x of [-3.0, 3.0]) b.box(0.04, 0.04, 4.4, 0xf5f0e2, x, 0.75, 0);
       b.box(1.6, 0.9, 0.1, 0xf2a21c, 0, 0.9, 2.5);
       b.box(0.1, 0.9, 0.1, 0x8a5a36, -0.7, 0, 2.5); b.box(0.1, 0.9, 0.1, 0x8a5a36, 0.7, 0, 2.5);
       b.box(1.1, 0.08, 0.12, 0xffffff, 0, 1.45, 2.56);
@@ -86,7 +91,7 @@ export class Buildings3D {
       const first = lot.key === null;
       lot.key = k;
       if (lot.mesh) { this.disposeMesh(lot.mesh); lot.g.remove(lot.mesh); }
-      const b = this.build(owner, level, road);
+      const b = this.build(owner, level, road, this.islandHex[i]);
       const mesh = new THREE.Mesh(b.build(), mat);
       mesh.castShadow = true; mesh.receiveShadow = true;
       lot.g.add(mesh); lot.mesh = mesh;

@@ -12,7 +12,7 @@ export class CameraController {
     this.controls = new OrbitControls(camera, dom);
     const c = this.controls;
     c.enableDamping = true; c.dampingFactor = 0.08;
-    c.minDistance = 9; c.maxDistance = 240;
+    c.minDistance = 9; c.maxDistance = 260;
     c.minPolarAngle = 0.08; c.maxPolarAngle = 1.46;
     c.screenSpacePanning = false;
     c.rotateSpeed = 0.7; c.zoomSpeed = 0.9; c.panSpeed = 0.9;
@@ -41,8 +41,8 @@ export class CameraController {
     this.flyTo(this.presetOverview(), 0.01);
   }
 
-  presetOverview() { const f = this.aspectFactor(); return { target: new THREE.Vector3(0, 0, 4), pos: new THREE.Vector3(0, 96 * f, 120 * f) }; }
-  presetTop() { const f = this.aspectFactor(); return { target: new THREE.Vector3(0, 0, 0), pos: new THREE.Vector3(0.01, 175 * f, 0.5) }; }
+  presetOverview() { const f = this.aspectFactor(); return { target: new THREE.Vector3(0, 0, 4), pos: new THREE.Vector3(0, 104 * f, 132 * f) }; }
+  presetTop() { const f = this.aspectFactor(); return { target: new THREE.Vector3(0, 0, 0), pos: new THREE.Vector3(0.01, 190 * f, 0.5) }; }
   presetOffset(kind, around) {
     const t = around.clone();
     if (kind === 'iso') { const r = 46 * Math.min(1.35, this.aspectFactor()); return { target: t, pos: t.clone().add(new THREE.Vector3(r * 0.62, r * 0.78, r * 0.62)) }; }

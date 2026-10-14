@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { MeshBuilder } from '../world/MeshBuilder.js';
 
 const HORIZON = 0xcdeeff;
 
@@ -59,26 +60,23 @@ export class Environment3D {
   }
 
   createClouds() {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, transparent: true, opacity: 0.93, emissive: 0xdff1ff, emissiveIntensity: 0.35 });
-    const geo = new THREE.IcosahedronGeometry(1, 1);
+    // Setiap awan = satu mesh gabungan (beberapa gumpalan), supaya hemat draw call.
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true, transparent: true, opacity: 0.93, emissive: 0xdff1ff, emissiveIntensity: 0.35 });
     this.clouds = new THREE.Group();
     let seed = 5;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    const total = this.quality.clouds;
-    for (let c = 0; c < total; c++) {
-      const g = new THREE.Group();
+    for (let c = 0; c < this.quality.clouds; c++) {
+      const b = new MeshBuilder();
       const puffs = 4 + Math.floor(rnd() * 4);
       for (let p = 0; p < puffs; p++) {
-        const m = new THREE.Mesh(geo, mat);
         const s = 4 + rnd() * 5;
-        m.scale.set(s * 1.3, s * 0.7, s);
-        m.position.set((p - puffs / 2) * 5.2 + rnd() * 2, rnd() * 2, rnd() * 4 - 2);
-        g.add(m);
+        b.sphere(1, 0xffffff, (p - puffs / 2) * 5.2 + rnd() * 2, rnd() * 2, rnd() * 4 - 2, { sx: s * 1.3, sy: s * 0.7, sz: s });
       }
-      const a = rnd() * Math.PI * 2, r = 50 + rnd() * 150;
-      g.position.set(Math.cos(a) * r, 48 + rnd() * 30, Math.sin(a) * r);
-      g.userData.speed = 0.5 + rnd() * 0.9;
-      this.clouds.add(g);
+      const m = new THREE.Mesh(b.build(), mat);
+      const a = rnd() * Math.PI * 2, r = 50 + rnd() * 170;
+      m.position.set(Math.cos(a) * r, 52 + rnd() * 30, Math.sin(a) * r);
+      m.userData.speed = 0.5 + rnd() * 0.9;
+      this.clouds.add(m);
     }
     this.scene.add(this.clouds);
   }

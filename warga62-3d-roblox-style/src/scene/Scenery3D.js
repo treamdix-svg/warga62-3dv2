@@ -3,6 +3,7 @@ import { MeshBuilder, vertexMaterial } from '../world/MeshBuilder.js';
 import { mulberry32 } from '../world/noise.js';
 import { engine } from '../engine/GameBridge.js';
 import * as P from '../world/Prefabs.js';
+import { buildCity, buildKampung } from '../world/Cities.js';
 
 const TAU = Math.PI * 2;
 export const CITY_R = 28;
@@ -21,16 +22,11 @@ export class Scenery3D {
     // Reservasi lot & petak.
     for (const lot of world.lots) this.occupied.push({ x: lot.x, z: lot.z, r: world.tiles[lot.index].corner ? 11 : 6.2 });
     for (const h of world.heroes) this.occupied.push({ x: h.x, z: h.z, r: 13.5 });
-    // Cadangkan tempat monumen kota di sisi luar jalan.
-    for (const t of world.tiles) {
-      if (engine.tiles[t.index][1] !== 'asset') continue;
-      const side = world.lots[t.index].side === 1 ? -1 : 1;
-      this.occupied.push({ x: t.x + t.nx * side * 6.4, z: t.z + t.nz * side * 6.4, r: 3.4 });
-    }
+    // Cadangkan plat klaster kota (6.8 x 9) di sisi luar jalan: tiga lingkaran sepanjang kedalaman plat.
+    for (const pl of world.plates) for (const off of [-3.0, 0, 3.0]) this.occupied.push({ x: pl.x + pl.nx * off, z: pl.z + pl.nz * off, r: 4.4 });
     this.buildCity();
-    this.buildVillages();
+    this.buildCityClusters();
     this.buildNature();
-    this.buildRoadside();
   }
 
   free(x, z, r = 2) {
@@ -111,34 +107,18 @@ export class Scenery3D {
     this.cityMeshReady = true;
   }
 
-  // ------------------------------------------------------------------ DESA ADAT
-  buildVillages() {
-    const w = this.world, b = new MeshBuilder(), r = this.rand;
-    const place = (fn, x, z, ry, rad, ...args) => {
-      if (!this.free(x, z, rad * 0.6) || w.isWater(x, z) || w.isWater(x + 2, z) || w.isWater(x - 2, z)) return false;
-      const y = this.groundY(x, z);
-      b.cyl(rad * 0.7, rad * 0.8, 1.6, 10, 0x9c8e74, x, y - 1.5, z);   // fondasi menutupi lereng
-      b.begin(x, y - 0.05, z, ry); fn(b, ...args); b.end();
-      this.occupied.push({ x, z, r: rad });
-      return true;
-    };
-    const outward = (t, d, lat = 0) => ({ x: t.x - t.nx * d + t.tx * lat, z: t.z - t.nz * d + t.tz * lat, ry: Math.atan2(t.nx, t.nz) });
-    // Rumah-rumah desa sepanjang sisi luar jalan.
-    for (const t of w.tiles) {
-      if (t.corner || (t.index % 2 === 0)) continue;
-      const k = t.island;
-      const style = [
-        [P.rumahGadang, 6], [P.rumahBetang, 6], [P.tongkonan, 6], [P.honai, 3.4], [P.joglo, 3.6],
-      ][k];
-      const dist = 11 + r() * 3, lat = (r() - 0.5) * 4;
-      const p = outward(t, dist, lat);
-      const small = r() < 0.55;
-      if (small) place(P.house, p.x, p.z, p.ry, 3.2, { wall: P.WALLS[Math.floor(r() * P.WALLS.length)], roof: P.ROOFS[Math.floor(r() * P.ROOFS.length)] });
-      else if (k === 3) { place(style[0], p.x, p.z, p.ry, style[1]); place(P.honai, p.x + 4, p.z + 2, p.ry, 3.3); }
-      else if (k === 0 || k === 1 || k === 2) place(P.house, p.x, p.z, p.ry, 3.2, { wall: P.WALLS[Math.floor(r() * P.WALLS.length)], roof: [0x2f2a28, 0x6b3f26][Math.floor(r() * 2)] });
-      else place(style[0], p.x, p.z, p.ry, style[1]);
+  // ------------------------------------------------------------------ KLASTER KOTA & KAMPUNG
+  // Tiap petak non-sudut punya plat miniatur di sisi luar yang menempel pada petaknya:
+  // petak kota = landmark khas kota; petak Takdir/Musibah/Tol/Tilang = kampung rumah adat pulau tsb.
+  buildCityClusters() {
+    const perIsland = [0, 1, 2, 3, 4].map(() => new MeshBuilder());
+    for (const pl of this.world.plates) {
+      const island = this.world.tiles[pl.i].island, b = perIsland[island];
+      b.begin(pl.x, pl.y, pl.z, pl.ry);
+      if (engine.tiles[pl.i][1] === 'asset') buildCity(b, engine.tiles[pl.i][0], island); else buildKampung(b, island);
+      b.end();
     }
-    this.mesh(b);
+    perIsland.forEach((b) => this.mesh(b));
   }
 
   // ------------------------------------------------------------------ ALAM
@@ -214,22 +194,5 @@ export class Scenery3D {
       }
     }
     this.sets = spots;
-  }
-
-  // Pohon peneduh, lampu, dan tiang pinggir jalan di sisi luar jalur.
-  buildRoadside() {
-    const w = this.world, b = new MeshBuilder(), r = this.rand;
-    const { x: sx, z: sz, tx, tz } = w.samples;
-    const outerOk = (x, z) => this.free(x, z, 0.6) && !w.isWater(x, z);
-    for (let j = 10; j < w.M; j += 30 + Math.floor(r() * 8)) {
-      const nx = -tz[j], nz = tx[j];
-      const dir = (nx * sx[j] + nz * sz[j]) > 0 ? 1 : -1;       // sisi luar
-      const x = sx[j] + nx * dir * 4.4, z = sz[j] + nz * dir * 4.4;
-      if (!outerOk(x, z)) continue;
-      const y = this.groundY(x, z);
-      b.begin(0, y, 0, 0); P.lamp(b, x, z, 2.7); b.end();
-    }
-    // Patok kilometer / penanda wilayah di tiap sudut sudah ada di struktur khusus.
-    this.mesh(b, { shadow: false });
   }
 }

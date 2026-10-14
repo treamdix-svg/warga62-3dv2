@@ -71,9 +71,9 @@ export function createWorld() {
     riverAng,
   };
 
-  const coastR = (ang) => 108 + 7 * Math.sin(ang * 3 + 0.7) + 4 * Math.sin(ang * 7 + 2.1) + 2 * Math.sin(ang * 13);
+  const coastR = (ang) => 118 + 7 * Math.sin(ang * 3 + 0.7) + 4 * Math.sin(ang * 7 + 2.1) + 2 * Math.sin(ang * 13);
   world.coastR = coastR;
-  const volcano = { x: Math.cos(18 * DEG) * 93, z: Math.sin(18 * DEG) * 93 };
+  const volcano = { x: Math.cos(18 * DEG) * 103, z: Math.sin(18 * DEG) * 103 };
   world.volcano = volcano;
 
   const baseHeight = (x, z) => {
@@ -85,7 +85,7 @@ export function createWorld() {
     h += n.noise(x * 0.25, z * 0.25) * 0.12;
     // Pegunungan sebagai batas alami di sisi luar jalan.
     const valley = world.riverAng === undefined ? 1 : smoothstep(0.12, 0.42, angDist(ang, world.riverAng));
-    const ring = smoothstep(68, 86, r) * smoothstep(coast - 1, coast - 17, r);
+    const ring = smoothstep(78, 96, r) * smoothstep(coast - 1, coast - 18, r);
     const region = regionOfAngle(ang);
     const boost = [1.0, 0.6, 0.85, 1.35, 0.8][region];
     const ridge = 1 - Math.abs(n.noise(x * 0.055 + 3, z * 0.055 + 7));
@@ -123,6 +123,7 @@ export function createWorld() {
     tiles.push({ index: i, island: Math.floor(i / 9), slot: i % 9, sample: j, x, y: sy[j], z, tx, tz, nx, nz, corner: i % 9 === 0 });
   }
   world.tiles = tiles;
+  world.WALK_Y = 0.32;      // tinggi pijakan pion di atas permukaan jalur
 
   // Lokasi lima landmark wilayah: di sisi LUAR jalan, di tengah tiap pulau (tidak menutupi 45 petak).
   const heroDefs = [{ k: 0, ti: 4.5 }, { k: 1, ti: 13.5 }, { k: 2, ti: 25.4 }, { k: 3, ti: 31.5 }, { k: 4, ti: 40.5 }];
@@ -130,10 +131,17 @@ export function createWorld() {
     const j = Math.round(d.ti * K) % M;
     let nx = -stz[j], nz = stx[j];
     if (nx * -sx[j] + nz * -sz[j] < 0) { nx = -nx; nz = -nz; }
-    const D = 17.5;
+    const D = 25;
     return { k: d.k, x: sx[j] - nx * D, z: sz[j] - nz * D, y: sy[j], r0: 11.5, r1: 16, rotationY: Math.atan2(nx, nz), labelY: 20 };
   });
   world.landmarkPositions = world.heroes.map((h) => ({ island: h.k, x: h.x, z: h.z }));
+
+  // Plat miniatur kota di sisi luar jalan (6.8 x 9). Didaftarkan oleh GameBridge untuk tiap petak aset.
+  world.plates = [];
+  world.addPlate = (i) => {
+    const t = tiles[i], OUT = 7.5;
+    world.plates.push({ i, x: t.x - t.nx * OUT, z: t.z - t.nz * OUT, y: t.y, nx: t.nx, nz: t.nz, ux: t.nz, uz: -t.nx, hw: 3.4, hd: 4.5, ry: Math.atan2(t.nx, t.nz) });
+  };
 
   // ---------- 6. Sungai & danau ----------
   const crossIdx = Math.round(21.5 * K);
@@ -182,11 +190,11 @@ export function createWorld() {
   // ---------- 7. Lot / landmark di sisi dalam (atau luar bila terhalang air) ----------
   const lots = [];
   for (const t of tiles) {
-    const off = t.corner ? 9.5 : 6.4;
+    const off = t.corner ? 9.5 : 5.7;
     let side = 1;
     let x = t.x + t.nx * off, z = t.z + t.nz * off;
     const blocked = (px, pz) => { const r = riverInfo(px, pz); return r.d < r.hw + 5 || lakeDist(px, pz) < lake.r + 4.5; };
-    if (blocked(x, z) || blocked(t.x + t.nx * (off - 3), t.z + t.nz * (off - 3))) {
+    if (blocked(x, z) || blocked(t.x + t.nx * (off - 2.4), t.z + t.nz * (off - 2.4))) {
       side = -1; x = t.x - t.nx * off; z = t.z - t.nz * off;
     }
     lots.push({ index: t.index, x, z, y: t.y, side, fx: -t.nx * side, fz: -t.nz * side, rotationY: Math.atan2(-t.nx * side, -t.nz * side) });
@@ -228,6 +236,14 @@ export function createWorld() {
       const d = Math.hypot(dx, dz);
       const w = 1 - smoothstep(tiles[i].corner ? 7.5 : 4.4, tiles[i].corner ? 11 : 8.4, d);
       if (w > 0) h = lerp(h, lot.y - 0.02, w);
+    }
+    for (const pl of world.plates) {
+      const dx = x - pl.x, dz = z - pl.z;
+      if (dx > 8.6 || dx < -8.6 || dz > 8.6 || dz < -8.6) continue;
+      const u = dx * pl.ux + dz * pl.uz, v = dx * pl.nx + dz * pl.nz;
+      const dd = Math.max(Math.abs(u) / (pl.hw + 0.4), Math.abs(v) / (pl.hd + 0.4));
+      const w = 1 - smoothstep(1.0, 1.75, dd);
+      if (w > 0) h = lerp(h, pl.y - 0.02, w);
     }
     for (const hero of world.heroes) {
       const dx = x - hero.x, dz = z - hero.z;

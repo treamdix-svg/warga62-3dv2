@@ -4,8 +4,8 @@ import { clamp, lerp, smoothstep } from '../world/noise.js';
 const REGION_GRASS = [0x6cc35a, 0x4ea85b, 0x8ccf5f, 0x5fb86d, 0x7bd957].map((c) => new THREE.Color(c));
 const SAND = new THREE.Color(0xf2dca4);
 const WET_SAND = new THREE.Color(0xd9c28a);
-const ROCK = new THREE.Color(0xa6a29a);
-const ROCK_DARK = new THREE.Color(0x85817c);
+const ROCK = new THREE.Color(0x9a9187);
+const ROCK_DARK = new THREE.Color(0x766f69);
 const SNOW = new THREE.Color(0xf6fbff);
 const SEABED_SHALLOW = new THREE.Color(0x7fd3c4);
 const SEABED_DEEP = new THREE.Color(0x1d6f86);
@@ -16,7 +16,7 @@ const _c = new THREE.Color();
 export class Terrain3D {
   constructor(scene, world, quality) {
     this.world = world;
-    const half = 128, seg = quality.terrainSegments;
+    const half = 140, seg = quality.terrainSegments;
     const geo = new THREE.PlaneGeometry(half * 2, half * 2, seg, seg);
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
@@ -67,7 +67,7 @@ export class Terrain3D {
     const rockAmt = clamp(smoothstep(0.3 + strata, 0.66 + strata, slope) + smoothstep(14, 24, h) * 0.7, 0, 1);
     if (rockAmt > 0) out.lerp(slope > 0.45 ? ROCK_DARK : ROCK, rockAmt);
     // Puncak bersalju.
-    const snowLine = region === 3 ? 12.5 : 17.5;
+    const snowLine = region === 3 ? 13.5 : 22;
     const snow = smoothstep(snowLine, snowLine + 4, h + w.n.noise(x * 0.1, z * 0.1) * 1.5);
     if (snow > 0) out.lerp(SNOW, snow);
     // Pantai.

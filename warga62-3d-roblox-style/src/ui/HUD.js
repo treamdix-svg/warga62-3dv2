@@ -58,6 +58,7 @@ export class HUD {
         <div class="tabs"><button data-tab="menu" class="active">Permainan</button><button data-tab="log">Riwayat</button><button data-tab="rules">Aturan</button></div>
         <div class="tab-body" id="tab-menu">
           <label class="row">Volume suara <input type="range" id="vol" min="0" max="100" value="60"></label>
+          <label class="row">Suara &amp; musik suasana <input type="checkbox" id="snd-on" checked style="width:22px;height:22px"></label>
           <label class="row">Grafis
             <select id="quality-select"><option value="auto">Otomatis</option><option value="low">Hemat (HP)</option><option value="high">Tinggi (PC)</option></select>
           </label>
@@ -107,6 +108,10 @@ export class HUD {
       log: $('tab-log'), gameover: $('gameover'), winner: $('winner-name'), stats: $('final-stats'), start: $('start-screen'),
       soundIcon: $('sound-icon'), camButtons: $('cam-buttons'),
     };
+    // Tinggi bilah atas dipakai CSS agar panel pemain/toast tidak menimpa banner giliran.
+    const header = this.container.querySelector('.top-bar');
+    const fit = () => document.documentElement.style.setProperty('--topbar-h', header.offsetHeight + 'px');
+    fit(); new ResizeObserver(fit).observe(header); addEventListener('resize', fit);
     this.dom.camButtons.addEventListener('click', (e) => {
       const b = e.target.closest('[data-cam]'); if (!b) return;
       sounds.playClick(); this.cb.onCamera?.(b.dataset.cam);
@@ -122,6 +127,7 @@ export class HUD {
       if (b.dataset.tab === 'log') this.renderLog();
     }));
     $('vol').addEventListener('input', (e) => sounds.setVolume(Number(e.target.value) / 100));
+    $('snd-on').addEventListener('change', (e) => { sounds.init(); sounds.setMuted(!e.target.checked); this.dom.soundIcon.textContent = sounds.muted ? '🔇' : '🔊'; });
     const qs = $('quality-select');
     qs.value = new URLSearchParams(location.search).get('quality') || 'auto';
     qs.addEventListener('change', () => {
@@ -178,7 +184,7 @@ export class HUD {
     const data = engine.tiles[i];
     const lines = [];
     const island = ISLAND_CONFIG.find((c) => c.name === data[4]);
-    let html = `<div class="ti-head"><span class="ti-num" style="background:${island?.hex || '#f59e0b'}">${i}</span><b>${esc(data[0])}</b><small>${esc(data[4])}</small></div>`;
+    let html = `<div class="ti-head"><span class="ti-num" style="background:${island?.hex || '#f59e0b'}">${esc(data[3] || "⌂")}</span><b>${esc(data[0])}</b><small>${esc(data[4])}</small></div>`;
     if (data[1] === 'asset') {
       const prop = engine.propertyAt(i);
       const owner = state?.owners?.[i];
@@ -286,7 +292,7 @@ export class HUD {
       box.classList.add('many');
       for (let k = 0; k < 45; k++) {
         if (k === player.pos) continue;
-        if (engine.tiles[k][1] === 'toll' || state.roads[k]) add(`🚗 ke ${k} · ${name(k)}`, 'secondary', act('tollmove', k));
+        if (engine.tiles[k][1] === 'toll' || state.roads[k]) add(`🚗 ke ${name(k)}`, 'secondary', act('tollmove', k));
       }
     } else if (phase === 'salary') {
       box.classList.add('many');

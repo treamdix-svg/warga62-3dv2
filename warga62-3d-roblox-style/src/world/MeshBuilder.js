@@ -68,6 +68,13 @@ export class MeshBuilder {
     return this.add(shared.sphere[key], color, x, y + r, z, o);
   }
 
+  torus(R, r, color, x = 0, y = 0, z = 0, o = {}, seg = 24) {
+    const key = `${R}|${r}|${seg}`;
+    shared.torus ??= {};
+    shared.torus[key] ??= new THREE.TorusGeometry(R, r, 6, seg);
+    return this.add(shared.torus[key], color, x, y, z, o);
+  }
+
   // Atap pelana (prisma segitiga). Lebar mengikuti sumbu X, punggung atap sepanjang Z.
   gable(w, h, d, color, x = 0, y = 0, z = 0, o = {}) {
     const g = new THREE.BufferGeometry();

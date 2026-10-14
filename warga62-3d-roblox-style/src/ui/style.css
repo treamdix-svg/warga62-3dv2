@@ -33,7 +33,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; touch-action: ma
 .icon-btn.active { background: rgba(255, 176, 32, 0.9); color: #2a1a00; border-color: #ffd37a; }
 
 /* ---------- Daftar pemain ---------- */
-.players-panel { position: absolute; top: calc(var(--safe-t) + 64px); left: calc(var(--safe-l) + 8px); width: 236px; max-height: calc(100% - 300px); display: flex; flex-direction: column; gap: 6px; }
+.players-panel { position: absolute; top: calc(var(--safe-t) + var(--topbar-h, 56px) + 10px); left: calc(var(--safe-l) + 8px); width: 236px; max-height: calc(100% - 300px); display: flex; flex-direction: column; gap: 6px; }
 .panel-toggle { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; backdrop-filter: blur(6px); }
 .players-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; scrollbar-width: thin; touch-action: pan-y; }
 .players-panel.collapsed .players-list { display: none; }
@@ -47,7 +47,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; touch-action: ma
 .player-card.out .pc-money { color: #fca5a5; }
 
 /* ---------- Info lokasi ---------- */
-.tile-info { position: absolute; top: calc(var(--safe-t) + 64px); right: calc(var(--safe-r) + 8px); width: 250px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(6px); font-size: 13px; }
+.tile-info { position: absolute; top: calc(var(--safe-t) + var(--topbar-h, 56px) + 10px); right: calc(var(--safe-r) + 8px); width: 250px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(6px); font-size: 13px; }
 .ti-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
 .ti-num { min-width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #fff; }
 .ti-head small { color: var(--ink-dim); margin-left: auto; font-size: 11px; }
@@ -123,21 +123,22 @@ select, .name-row input { background: #12394a; color: var(--ink); border: 1px so
   .brand small, .icon-btn em { display: none; }
   .brand { padding: 5px 9px; } .brand b { font-size: 14px; }
   .pill { font-size: 11px; padding: 5px 9px; }
-  .turn-banner { order: 5; flex: 1 1 100%; max-width: 100%; justify-content: center; margin: 0; padding: 5px 12px; font-size: 13px; }
-  .cam-buttons { margin-left: auto; gap: 4px; } .icon-btn { min-width: 36px; height: 36px; padding: 0 8px; }
-  .players-panel { top: calc(var(--safe-t) + 100px); right: calc(var(--safe-r) + 8px); width: auto; max-height: none; flex-direction: row; align-items: flex-start; }
+  .turn-banner { order: 5; flex: 1 1 0; min-width: 0; max-width: none; justify-content: center; margin: 0; padding: 5px 10px; font-size: 13px; }
+  .cam-buttons { order: 6; flex: none; gap: 4px; margin-left: 0; } .icon-btn { min-width: 36px; height: 36px; padding: 0 8px; }
+  #btn-sound { display: none; }
+  .players-panel { right: calc(var(--safe-r) + 8px); width: auto; max-height: none; flex-direction: row; align-items: flex-start; }
   .panel-toggle { flex: none; }
   .players-list { flex-direction: row; overflow-x: auto; overflow-y: hidden; flex: 1; touch-action: pan-x; padding-bottom: 4px; }
-  .player-card { min-width: 142px; padding: 5px 8px; } .player-card .pc-sub { display: none; }
+  .player-card { min-width: 132px; padding: 5px 8px; grid-template-columns: auto 1fr; } .player-card .pc-money { grid-column: 2; font-size: 12px; } .player-card .pc-sub { display: none; }
   .tile-info { top: auto; bottom: calc(var(--safe-b) + 200px); left: 8px; right: 8px; width: auto; }
-  .toast-stack { top: calc(var(--safe-t) + 150px); }
+  .toast-stack { top: calc(var(--safe-t) + var(--topbar-h, 90px) + 70px); }
   .btn-action { padding: 10px 14px; font-size: 13px; min-height: 44px; } .btn-action.primary { font-size: 15px; }
   .msg-text { font-size: 12px; }
   .action-controls { max-height: 30vh; }
-  .drawer { top: calc(var(--safe-t) + 100px); max-height: calc(100% - 180px); }
+  .drawer { top: calc(var(--safe-t) + var(--topbar-h, 90px) + 10px); max-height: calc(100% - 180px); }
 }
 @media (max-height: 520px) and (orientation: landscape) {
-  .players-panel { top: calc(var(--safe-t) + 56px); max-height: calc(100% - 170px); width: 200px; flex-direction: column; }
+  .players-panel { max-height: calc(100% - 170px); width: 200px; flex-direction: column; }
   .players-list { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
   .player-card { min-width: 0; } .turn-banner { order: 0; flex: 0 1 auto; }
   .msg-panel { padding: 4px 10px; } .msg-text { max-height: 2.7em; } .action-controls { max-height: 40vh; }

@@ -7,6 +7,8 @@ export const engine = createGameEngine(CARDS);
 
 // Dunia 3D: jalur 45 lokasi dihitung sekali dan dipakai semua modul.
 export const world = createWorld();
+// Plat kota (petak aset) / kampung (Tol, Tilang) di sisi luar petak. Takdir & Musibah sengaja tanpa landmark.
+for (let i = 0; i < 45; i++) if (i % 9 !== 0 && !['fate', 'hazard'].includes(engine.tiles[i][1])) world.addPlate(i);
 
 // Lima wilayah sesuai engine (indeks petak = 9 per pulau).
 export const ISLAND_CONFIG = [
