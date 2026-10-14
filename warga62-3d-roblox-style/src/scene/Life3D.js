@@ -56,7 +56,8 @@ function fishing(b, color) {
 
 // Dunia hidup: lalu lintas kota, perahu di laut, burung, dan balon udara.
 export class Life3D {
-  constructor(scene, quality) {
+  constructor(scene, quality, obstacles = []) {
+    this.obstacles = obstacles;
     this.scene = scene; this.quality = quality;
     this.rand = mulberry32(777);
     this.vehicles = []; this.boats = []; this.birds = [];
@@ -68,19 +69,32 @@ export class Life3D {
 
   mk(fn, ...args) { const b = new MeshBuilder(); fn(b, ...args); const m = new THREE.Mesh(b.build(), mat); m.castShadow = true; m.receiveShadow = true; return m; }
 
+  // Kendaraan hanya melaju di ruas jalan kota yang benar-benar kosong (tidak melewati bundaran, stadion,
+  // masjid, taman, danau, atau sungai) dan berbalik arah di ujung ruas, jadi tidak pernah menembus bangunan.
   buildTraffic(scene) {
     const r = this.rand, step = CITY_STEP, y = 2.52;
     const colors = [0xe0463d, 0x2a8fd6, 0xf6c445, 0xffffff, 0x2fae66, 0x39434f, 0xf2762e, 0x9b59d0];
-    const offsets = [];
-    for (let g = -4; g <= 3; g++) offsets.push(g * step + step / 2);
-    for (let n = 0; n < this.quality.vehicles; n++) {
-      const kind = n % 6 === 5 ? 'bus' : n % 6 === 3 ? 'angkot' : n % 6 === 4 ? 'bajaj' : 'car';
+    const blocked = (x, z) => world.isWater(x, z) || world.lakeDist(x, z) < world.lake.r + 2 || this.obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + 1.6);
+    const lanes = [];
+    for (let g = -4; g <= 3; g++) {
+      const off = g * step + step / 2, half = Math.sqrt(Math.max(0, (CITY_R - 2) ** 2 - off * off));
+      for (const horizontal of [true, false]) {
+        let best = null, start = null;
+        for (let t = -half; t <= half + 0.01; t += 0.5) {
+          const x = horizontal ? t : off, z = horizontal ? off : t;
+          const ok = t < half && !blocked(x, z);
+          if (ok && start === null) start = t;
+          if (!ok && start !== null) { if (!best || t - start > best[1] - best[0]) best = [start, t - 0.5]; start = null; }
+        }
+        if (best && best[1] - best[0] >= 9) lanes.push({ off, horizontal, a: best[0] + 1.5, b: best[1] - 1.5 });
+      }
+    }
+    lanes.sort(() => r() - 0.5);
+    for (let n = 0; n < Math.min(this.quality.vehicles, lanes.length); n++) {
+      const kind = n % 5 === 4 ? 'bus' : n % 5 === 2 ? 'angkot' : n % 5 === 3 ? 'bajaj' : 'car';
       const mesh = kind === 'bus' ? this.mk(bus, 0xe0463d) : kind === 'angkot' ? this.mk(angkot, 0x2a8fd6) : kind === 'bajaj' ? this.mk(bajaj) : this.mk(car, colors[Math.floor(r() * colors.length)]);
-      const off = offsets[Math.floor(r() * offsets.length)];
-      const horizontal = r() < 0.5, dir = r() < 0.5 ? 1 : -1;
-      const half = Math.sqrt(Math.max(0, (CITY_R - 1.5) ** 2 - off * off));
-      if (half < 5) { n--; continue; }
-      this.vehicles.push({ mesh, off, horizontal, dir, half, s: (r() * 2 - 1) * half, speed: 2.8 + r() * 2.4, lane: dir * 0.65 });
+      const L = lanes[n];
+      this.vehicles.push({ mesh, ...L, dir: r() < 0.5 ? 1 : -1, s: L.a + r() * (L.b - L.a), speed: 2.4 + r() * 1.8 });
       scene.add(mesh);
     }
     this.vy = y;
@@ -132,7 +146,8 @@ export class Life3D {
   update(dt, time) {
     for (const v of this.vehicles) {
       v.s += v.dir * v.speed * dt;
-      if (v.s > v.half) { v.s = -v.half; } else if (v.s < -v.half) { v.s = v.half; }
+      if (v.s > v.b) { v.s = v.b; v.dir = -1; } else if (v.s < v.a) { v.s = v.a; v.dir = 1; }
+      v.lane = v.dir * 0.65;
       if (v.horizontal) { v.mesh.position.set(v.s, this.vy, v.off + v.lane); v.mesh.rotation.y = v.dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
       else { v.mesh.position.set(v.off + v.lane, this.vy, v.s); v.mesh.rotation.y = v.dir > 0 ? 0 : Math.PI; }
     }

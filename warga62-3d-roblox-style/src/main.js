@@ -84,7 +84,7 @@ class Warga62App {
     this.avatars = new Avatars3D(s, quality);
     this.dice = new Dice3D(s);
     this.effects = new Effects3D(s, quality);
-    this.life = new Life3D(s, quality);
+    this.life = new Life3D(s, quality, this.scenery.cityObstacles || []);
     this.cameraCtl = new CameraController(this.camera, this.renderer.domElement);
     this.avatars.onStep = () => sounds.playStep();
     this.avatars.onTeleportLand = (idx, pos) => { this.effects.sparkle(pos.clone().add(new THREE.Vector3(0, 1.5, 0)), PLAYER_COLORS[idx % PLAYER_COLORS.length].color); sounds.playTeleport(); };

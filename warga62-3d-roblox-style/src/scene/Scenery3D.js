@@ -63,6 +63,7 @@ export class Scenery3D {
     // Monas dan plaza
     b.begin(CITY_C.x, baseY, CITY_C.z, 0); P.bundaran(b); b.end();
     this.occupied.push({ x: CITY_C.x, z: CITY_C.z, r: 9 });
+    this.cityObstacles = [{ x: CITY_C.x, z: CITY_C.z, r: 9.8 }, { x: STADIUM.x, z: STADIUM.z, r: 6.4 }];
     b.begin(STADIUM.x, baseY, STADIUM.z, 0.3); P.stadium(b); b.end();
     this.occupied.push({ x: STADIUM.x, z: STADIUM.z, r: 8 });
     // Bangunan per sel grid
@@ -81,9 +82,9 @@ export class Scenery3D {
       const dc = Math.hypot(cx - CITY_C.x, cz - CITY_C.z);
       b.box(7.0, 0.16, 7.0, 0xdcd6c6, cx, baseY - 0.02, cz);
       if (r() < 0.7) { b.cyl(0.1, 0.14, 1.0, 5, 0x7a5638, cx + 3.1, baseY, cz + 3.1); b.sphere(0.7, 0x4cb85a, cx + 3.1, baseY + 0.9, cz + 3.1); }
-      b.begin(cx, baseY + 0.12, cz, rot);
+      b.begin(cx, baseY + 0.12, cz, rot, 0.82);   // diperkecil agar tidak menjorok ke jalan kota
       const pick = r();
-      if (!mosque && d0 > 12 && count > 4) { P.masjid(b); mosque = true; this.occupied.push({ x: cx, z: cz, r: 5.5 }); }
+      if (!mosque && d0 > 12 && count > 4) { P.masjid(b); mosque = true; this.occupied.push({ x: cx, z: cz, r: 5.5 }); this.cityObstacles.push({ x: cx, z: cz, r: 4.6 }); }
       else if (dc < 20 && pick < 0.45) { P.tower(b, { floors: 8 + Math.floor(r() * 9), color: [0xdfe9f1, 0xe8e2d4, 0xd5e4ea][Math.floor(r() * 3)] }); this.occupied.push({ x: cx, z: cz, r: 3.8 }); }
       else if (pick < 0.62) { P.apartment(b, { wall: P.WALLS[Math.floor(r() * P.WALLS.length)], floors: 4 + Math.floor(r() * 4) }); this.occupied.push({ x: cx, z: cz, r: 4.2 }); }
       else if (pick < 0.88) { P.ruko(b, { floors: 2 + Math.floor(r() * 2), wall: P.WALLS[Math.floor(r() * P.WALLS.length)], roof: P.ROOFS[Math.floor(r() * P.ROOFS.length)], awning: [0xe0463d, 0x2a8fd6, 0x2fae66, 0xf2a21c][Math.floor(r() * 4)] }); this.occupied.push({ x: cx, z: cz, r: 3.6 }); }
@@ -101,6 +102,7 @@ export class Scenery3D {
     const park = { x: -9, z: 13 };
     if (Math.hypot(park.x, park.z) < CITY_R - 5 && w.lakeDist(park.x, park.z) > w.lake.r + 5) {
       b.begin(park.x, baseY, park.z, 0); P.fountain(b, 2.2); b.end();
+      this.cityObstacles.push({ x: park.x, z: park.z, r: 2.6 });
       this.occupied.push({ x: park.x, z: park.z, r: 3 });
     }
     this.mesh(b);
