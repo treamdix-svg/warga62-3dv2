@@ -64,7 +64,7 @@ export class Life3D {
     this.buildTraffic(scene);
     this.buildBoats(scene);
     if (quality.birds) this.buildBirds(scene);
-    this.buildBalloon(scene);
+    // balon udara dihapus: menutupi papan dari kamera atas
   }
 
   mk(fn, ...args) { const b = new MeshBuilder(); fn(b, ...args); const m = new THREE.Mesh(b.build(), mat); m.castShadow = true; m.receiveShadow = true; return m; }
