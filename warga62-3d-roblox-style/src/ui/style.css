@@ -1,0 +1,144 @@
+:root {
+  --ink: #eaf8fb; --ink-dim: #a9cdd6; --panel: rgba(10, 36, 49, 0.82); --panel-solid: #0c2733; --line: rgba(160, 225, 240, 0.22);
+  --accent: #ffb020; --good: #25c26e; --bad: #ef4444; --warn: #f59e0b; --blue: #2d8cf0;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #8fd4f7; font-family: var(--font); color: var(--ink); overscroll-behavior: none; touch-action: none; }
+#canvas-container { position: fixed; inset: 0; }
+#canvas-container canvas { display: block; width: 100%; height: 100%; outline: none; }
+#ui-container { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+#ui-root { position: absolute; inset: 0; pointer-events: none; }
+.interactive { pointer-events: auto; }
+button { font-family: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+[hidden] { display: none !important; }
+
+/* ---------- Bilah atas ---------- */
+.top-bar { position: absolute; top: calc(var(--safe-t) + 8px); left: calc(var(--safe-l) + 8px); right: calc(var(--safe-r) + 8px); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.top-bar > * { pointer-events: auto; }
+.brand { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 6px 12px; display: flex; flex-direction: column; line-height: 1.05; backdrop-filter: blur(6px); }
+.brand b { font-size: 17px; letter-spacing: 0.5px; }
+.brand small { font-size: 9.5px; color: var(--accent); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 700; backdrop-filter: blur(6px); white-space: nowrap; }
+.pill.money { color: #8dffbf; }
+.turn-banner { margin: 0 auto; display: flex; align-items: center; gap: 8px; background: var(--panel); border: 2px solid rgba(255, 176, 32, 0.8); border-radius: 999px; padding: 6px 16px; font-weight: 800; font-size: 14px; backdrop-filter: blur(6px); max-width: 46vw; }
+.turn-banner span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 0 10px currentColor; }
+.cam-buttons { display: flex; gap: 6px; }
+.icon-btn { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 40px; height: 40px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 16px; backdrop-filter: blur(6px); transition: transform 0.12s, background 0.15s; }
+.icon-btn em { font-style: normal; font-size: 12px; font-weight: 700; }
+.icon-btn:hover { background: rgba(23, 70, 92, 0.92); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn.active { background: rgba(255, 176, 32, 0.9); color: #2a1a00; border-color: #ffd37a; }
+
+/* ---------- Daftar pemain ---------- */
+.players-panel { position: absolute; top: calc(var(--safe-t) + 64px); left: calc(var(--safe-l) + 8px); width: 236px; max-height: calc(100% - 300px); display: flex; flex-direction: column; gap: 6px; }
+.panel-toggle { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; backdrop-filter: blur(6px); }
+.players-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; scrollbar-width: thin; touch-action: pan-y; }
+.players-panel.collapsed .players-list { display: none; }
+.player-card { --pc: #fff; text-align: left; background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--pc); border-radius: 12px; padding: 7px 10px; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; backdrop-filter: blur(6px); }
+.player-card .dot { color: var(--pc); background: var(--pc); width: 10px; height: 10px; }
+.player-card .pc-name { font-weight: 800; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-card .pc-money { font-weight: 800; font-size: 13px; color: #8dffbf; }
+.player-card .pc-sub { grid-column: 1 / -1; font-size: 11px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-card.active { background: rgba(255, 176, 32, 0.22); border-color: var(--accent); border-left-color: var(--pc); box-shadow: 0 0 0 2px rgba(255, 176, 32, 0.5); }
+.player-card.out { opacity: 0.5; }
+.player-card.out .pc-money { color: #fca5a5; }
+
+/* ---------- Info lokasi ---------- */
+.tile-info { position: absolute; top: calc(var(--safe-t) + 64px); right: calc(var(--safe-r) + 8px); width: 250px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(6px); font-size: 13px; }
+.ti-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.ti-num { min-width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #fff; }
+.ti-head small { color: var(--ink-dim); margin-left: auto; font-size: 11px; }
+.ti-line { color: var(--ink-dim); line-height: 1.5; }
+
+/* ---------- Dock bawah ---------- */
+.bottom-dock { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 8px); transform: translateX(-50%); width: min(780px, calc(100% - 16px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.bottom-dock > * { pointer-events: auto; }
+.msg-panel { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px 14px; backdrop-filter: blur(6px); text-align: center; position: relative; }
+.msg-title { font-weight: 800; font-size: 14px; color: var(--accent); }
+.msg-text { font-size: 13px; color: var(--ink); line-height: 1.35; max-height: 3.9em; overflow: hidden; }
+.msg-panel.flash { animation: flash 0.6s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.9); } to { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0); } }
+.dice-readout { margin-top: 4px; font-weight: 800; font-size: 16px; color: #fff; }
+.action-controls { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-height: 34vh; overflow-y: auto; padding: 2px; touch-action: pan-y; scrollbar-width: thin; }
+.action-controls.many { justify-content: flex-start; }
+.btn-action { border: 0; border-radius: 14px; padding: 12px 18px; min-height: 46px; font-size: 14px; font-weight: 800; color: #fff; background: #3b82f6; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.28), 0 8px 18px rgba(0, 0, 0, 0.25); transition: transform 0.1s, filter 0.15s; text-align: center; }
+.btn-action:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-action:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.28); }
+.btn-action:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+.btn-action.primary { background: linear-gradient(#ffa63a, #f0721a); font-size: 16px; padding: 13px 26px; }
+.btn-action.success { background: linear-gradient(#34d27f, #1ea35c); }
+.btn-action.warning { background: linear-gradient(#f5b73a, #d98a0a); color: #2a1a00; }
+.btn-action.danger { background: linear-gradient(#f26363, #cf2a2a); }
+.btn-action.secondary { background: linear-gradient(#5e7f8c, #46636f); }
+.btn-action.wide { width: 100%; }
+.debt-info { width: 100%; text-align: center; font-size: 13px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); border-radius: 12px; padding: 8px; }
+.action-controls.busy { opacity: 0.6; }
+
+/* ---------- Kartu (panel bawah, tidak menutup dunia) ---------- */
+.card-sheet { width: min(560px, 100%); background: linear-gradient(160deg, #fff8e1, #ffe9a8); color: #3b2a07; border: 3px solid #e0a52a; border-radius: 16px; padding: 10px 16px 12px; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); animation: pop 0.35s cubic-bezier(.2, 1.4, .4, 1); }
+.card-sheet.hazard { background: linear-gradient(160deg, #ffe4e4, #ffb7b7); color: #4a0e0e; border-color: #d33a3a; }
+.card-kind { font-size: 11px; font-weight: 800; letter-spacing: 2px; opacity: 0.75; }
+.card-title { display: block; font-size: 18px; margin: 2px 0; }
+.card-desc { margin: 2px 0 0; font-size: 13px; line-height: 1.4; }
+@keyframes pop { from { transform: translateY(24px) scale(0.92); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Toast ---------- */
+.toast-stack { position: absolute; top: calc(var(--safe-t) + 120px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.toast { background: rgba(10, 36, 49, 0.92); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-weight: 700; font-size: 13px; animation: pop 0.25s ease-out; transition: opacity 0.4s; }
+.toast.good { border-color: #25c26e; color: #8dffbf; } .toast.bad { border-color: #ef4444; color: #ffb4b4; }
+.toast.out { opacity: 0; }
+
+/* ---------- Menu & modal ---------- */
+.drawer { position: absolute; top: calc(var(--safe-t) + 60px); right: calc(var(--safe-r) + 8px); width: min(380px, calc(100% - 16px)); max-height: calc(100% - 140px); overflow: hidden; display: flex; flex-direction: column; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); z-index: 5; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; }
+.tabs { display: flex; gap: 4px; padding: 0 10px 6px; }
+.tabs button { flex: 1; background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 8px; font-weight: 700; font-size: 13px; color: var(--ink-dim); }
+.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-body { padding: 8px 14px 14px; overflow-y: auto; touch-action: pan-y; font-size: 13px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.row input[type=range] { flex: 1; max-width: 190px; }
+select, .name-row input { background: #12394a; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+.hint { color: var(--ink-dim); font-size: 12px; line-height: 1.5; }
+.log-line { padding: 5px 0; border-bottom: 1px dashed var(--line); color: var(--ink-dim); line-height: 1.35; }
+.log-line:first-child { color: var(--ink); }
+.rules { padding-left: 18px; line-height: 1.55; color: var(--ink-dim); margin: 0; }
+.modal-backdrop { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(6, 28, 40, 0.55); backdrop-filter: blur(5px); z-index: 20; padding: 12px; }
+.modal { width: min(440px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); touch-action: pan-y; }
+.modal h2 { margin: 0 0 6px; }
+.modal .logo { font-size: 34px; font-weight: 900; letter-spacing: 1px; background: linear-gradient(90deg, #ff5a4f, #ffd23f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { color: var(--ink-dim); margin: 4px 0 14px; font-size: 14px; }
+.count-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; font-weight: 700; }
+.count-row b { font-size: 24px; min-width: 28px; }
+.name-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 14px; max-height: 32vh; overflow-y: auto; }
+.name-row { display: flex; align-items: center; gap: 8px; } .name-row input { flex: 1; min-width: 0; }
+.winner { font-size: 20px; font-weight: 800; color: var(--accent); margin: 6px 0 12px; }
+.final-stats { text-align: left; margin-bottom: 14px; }
+.fs-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+
+/* ---------- HP / layar sempit ---------- */
+@media (max-width: 820px) {
+  .brand small, .icon-btn em { display: none; }
+  .brand { padding: 5px 9px; } .brand b { font-size: 14px; }
+  .pill { font-size: 11px; padding: 5px 9px; }
+  .turn-banner { order: 5; flex: 1 1 100%; max-width: 100%; justify-content: center; margin: 0; padding: 5px 12px; font-size: 13px; }
+  .cam-buttons { margin-left: auto; gap: 4px; } .icon-btn { min-width: 36px; height: 36px; padding: 0 8px; }
+  .players-panel { top: calc(var(--safe-t) + 100px); right: calc(var(--safe-r) + 8px); width: auto; max-height: none; flex-direction: row; align-items: flex-start; }
+  .panel-toggle { flex: none; }
+  .players-list { flex-direction: row; overflow-x: auto; overflow-y: hidden; flex: 1; touch-action: pan-x; padding-bottom: 4px; }
+  .player-card { min-width: 142px; padding: 5px 8px; } .player-card .pc-sub { display: none; }
+  .tile-info { top: auto; bottom: calc(var(--safe-b) + 200px); left: 8px; right: 8px; width: auto; }
+  .toast-stack { top: calc(var(--safe-t) + 150px); }
+  .btn-action { padding: 10px 14px; font-size: 13px; min-height: 44px; } .btn-action.primary { font-size: 15px; }
+  .msg-text { font-size: 12px; }
+  .action-controls { max-height: 30vh; }
+  .drawer { top: calc(var(--safe-t) + 100px); max-height: calc(100% - 180px); }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .players-panel { top: calc(var(--safe-t) + 56px); max-height: calc(100% - 170px); width: 200px; flex-direction: column; }
+  .players-list { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+  .player-card { min-width: 0; } .turn-banner { order: 0; flex: 0 1 auto; }
+  .msg-panel { padding: 4px 10px; } .msg-text { max-height: 2.7em; } .action-controls { max-height: 40vh; }
+}
