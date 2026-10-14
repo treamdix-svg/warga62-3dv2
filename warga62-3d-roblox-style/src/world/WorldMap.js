@@ -190,11 +190,12 @@ export function createWorld() {
   // ---------- 7. Lot / landmark di sisi dalam (atau luar bila terhalang air) ----------
   const lots = [];
   for (const t of tiles) {
-    const off = t.corner ? 9.5 : 5.7;
-    let side = 1;
-    let x = t.x + t.nx * off, z = t.z + t.nz * off;
+    // Petak sudut: bangunannya di sisi LUAR (sisi dalam sudut diapit tanah dua petak tetangga).
+    const off = t.corner ? 8 : 5.7;
+    let side = t.corner ? -1 : 1;
+    let x = t.x + t.nx * off * side, z = t.z + t.nz * off * side;
     const blocked = (px, pz) => { const r = riverInfo(px, pz); return r.d < r.hw + 5 || lakeDist(px, pz) < lake.r + 4.5; };
-    if (blocked(x, z) || blocked(t.x + t.nx * (off - 2.4), t.z + t.nz * (off - 2.4))) {
+    if (!t.corner && (blocked(x, z) || blocked(t.x + t.nx * (off - 2.4), t.z + t.nz * (off - 2.4)))) {
       side = -1; x = t.x - t.nx * off; z = t.z - t.nz * off;
     }
     lots.push({ index: t.index, x, z, y: t.y, side, fx: -t.nx * side, fz: -t.nz * side, rotationY: Math.atan2(-t.nx * side, -t.nz * side) });
@@ -234,7 +235,7 @@ export function createWorld() {
       const dx = x - lot.x, dz = z - lot.z;
       if (dx > 9.5 || dx < -9.5 || dz > 9.5 || dz < -9.5) continue;
       const d = Math.hypot(dx, dz);
-      const w = 1 - smoothstep(tiles[i].corner ? 7.5 : 4.4, tiles[i].corner ? 11 : 8.4, d);
+      const w = 1 - smoothstep(tiles[i].corner ? 6.0 : 4.4, tiles[i].corner ? 9.5 : 8.4, d);
       if (w > 0) h = lerp(h, lot.y - 0.02, w);
     }
     for (const pl of world.plates) {

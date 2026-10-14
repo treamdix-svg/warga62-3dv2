@@ -69,7 +69,8 @@ export class TileMarkers3D {
       if (type === 'asset') continue;
       const lot = world.lots[i];
       const b = groups[type === 'fate' || type === 'hazard' ? type : 'still'];
-      b.begin(lot.x, lot.y, lot.z, lot.rotationY);
+      // dikecilkan agar muat di lebar satu petak dan tidak meluber ke tanah tetangga
+      b.begin(lot.x, lot.y, lot.z, lot.rotationY, i % 9 === 0 ? 0.9 : 0.8);
       fns[type](b);
       b.end();
     }

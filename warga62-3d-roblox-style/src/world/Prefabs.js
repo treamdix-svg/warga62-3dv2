@@ -239,7 +239,7 @@ export function candi(b) {            // Candi bertingkat bergaya Borobudur
 
 // ---------- Struktur petak khusus (muncul di sisi dalam jalan, ±5 x 5) ----------
 export function gateMulai(b, color = 0x16a34a) {
-  b.cyl(7, 7.4, 0.2, 12, 0xdff3dc, 0, 0, 0);
+  b.cyl(5.4, 5.7, 0.2, 12, 0xdff3dc, 0, 0, 0);
   for (const sx of [-1, 1]) { b.box(1.1, 6, 1.1, WHITE, sx * 3.2, 0.2, 0); b.box(1.3, 0.5, 1.3, color, sx * 3.2, 6.2, 0); }
   b.box(8.5, 1.5, 1.2, color, 0, 5.6, 0);
   b.box(7.6, 0.7, 1.25, 0xfef3c7, 0, 5.95, 0.02);
