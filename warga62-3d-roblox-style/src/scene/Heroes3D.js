@@ -362,6 +362,8 @@ function monas() {
 }
 
 const BUILDERS = [jamGadang, tuguKhatulistiwa, tongkonan, honai, monas];
+// Versi miniatur untuk plaza Nusantara di pusat pulau.
+export function buildHeroMini(k) { return BUILDERS[k](); }
 
 export class Heroes3D {
   constructor(scene) {

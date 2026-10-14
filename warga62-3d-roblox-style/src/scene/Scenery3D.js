@@ -4,6 +4,7 @@ import { mulberry32 } from '../world/noise.js';
 import { engine } from '../engine/GameBridge.js';
 import * as P from '../world/Prefabs.js';
 import { buildCity, buildKampung } from '../world/Cities.js';
+import { buildHeroMini } from './Heroes3D.js';
 
 const TAU = Math.PI * 2;
 export const CITY_R = 28;
@@ -42,72 +43,54 @@ export class Scenery3D {
   groundY(x, z) { return this.world.heightAt(x, z); }
 
   // ------------------------------------------------------------------ KOTA
+  // Pusat pulau: Plaza Nusantara = kelima landmark pulau versi miniatur mengelilingi bundaran,
+  // dengan cincin gedung pencakar langit di belakangnya. Tanpa grid jalan & tanpa kendaraan.
   buildCity() {
-    const w = this.world, b = new MeshBuilder(), r = this.rand;
-    const gy = (x, z) => this.groundY(x, z);
-    // Alas kota (paving) + jalan kota
-    const baseY = 2.5;
-    b.cyl(CITY_R + 1, CITY_R + 1.6, 0.35, 32, 0xcdd4c8, 0, baseY - 0.34, 0);
-    // Jalan kota (grid)
-    const step = CITY_STEP;
-    const roadCol = 0x6b7480;
-    for (let g = -4; g <= 3; g++) {
-      const off = g * step + step / 2;
-      for (const horizontal of [true, false]) {
-        const half = Math.sqrt(Math.max(0, (CITY_R - 0.6) ** 2 - off * off));
-        if (half < 3) continue;
-        if (horizontal) { b.box(half * 2, 0.1, 2.5, roadCol, 0, baseY - 0.02, off); b.box(half * 2, 0.02, 0.1, 0xf4d34a, 0, baseY + 0.07, off); }
-        else { b.box(2.5, 0.1, half * 2, roadCol, off, baseY - 0.02, 0); b.box(0.1, 0.02, half * 2, 0xf4d34a, off, baseY + 0.07, 0); }
-      }
+    const w = this.world, b = new MeshBuilder(), r = this.rand, baseY = 2.5;
+    this.cityObstacles = [];
+    // Alas plaza: lantai batu + cincin taman + jalan melingkar
+    b.cyl(CITY_R + 1, CITY_R + 1.6, 0.35, 48, 0xd6d9cf, 0, baseY - 0.34, 0);
+    b.cyl(CITY_R - 1.2, CITY_R - 1.2, 0.06, 48, 0x6cc04a, 0, baseY + 0.0, 0);
+    b.cyl(17.4, 17.4, 0.08, 48, 0x6b7480, 0, baseY + 0.02, 0);
+    b.cyl(15.2, 15.2, 0.1, 48, 0xe8e3d4, 0, baseY + 0.04, 0);
+    // jalur pejalan dari tengah ke tiap landmark
+    for (let k = 0; k < 5; k++) { const a = this.heroAngle(k); b.box(2.4, 0.06, 15, 0xd9d2c0, Math.cos(a) * 7.5, baseY + 0.12, Math.sin(a) * 7.5, { ry: -a + Math.PI / 2 }); }
+    // Bundaran + Tugu Selamat Datang di pusat
+    b.begin(0, baseY + 0.1, 0, 0, 0.62); P.bundaran(b); b.end();
+    this.occupied.push({ x: 0, z: 0, r: CITY_R + 1 });
+    // Cincin gedung tinggi di belakang landmark
+    const ring = 23.6;
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2 + 0.11;
+      const x = Math.cos(a) * ring, z = Math.sin(a) * ring;
+      if (w.isWater(x, z) || w.lakeDist(x, z) < w.lake.r + 3) continue;
+      b.begin(x, baseY, z, -a + Math.PI / 2, 0.62);
+      if (i % 4 === 0) P.apartment(b, { wall: P.WALLS[i % P.WALLS.length], floors: 6 + (i % 3) });
+      else P.tower(b, { floors: 11 + ((i * 7) % 10), color: [0xdfe9f1, 0xe8e2d4, 0xd5e4ea, 0xe9f1ee][i % 4] });
+      b.end();
     }
-    // Monas dan plaza
-    b.begin(CITY_C.x, baseY, CITY_C.z, 0); P.bundaran(b); b.end();
-    this.occupied.push({ x: CITY_C.x, z: CITY_C.z, r: 9 });
-    this.cityObstacles = [{ x: CITY_C.x, z: CITY_C.z, r: 9.8 }, { x: STADIUM.x, z: STADIUM.z, r: 6.4 }];
-    b.begin(STADIUM.x, baseY, STADIUM.z, 0.3); P.stadium(b); b.end();
-    this.occupied.push({ x: STADIUM.x, z: STADIUM.z, r: 8 });
-    // Bangunan per sel grid
-    let count = 0, mosque = false;
-    const cells = [];
-    for (let gx = -4; gx <= 4; gx++) for (let gz = -4; gz <= 4; gz++) cells.push([gx * step, gz * step]);
-    cells.sort(() => r() - 0.5);
-    for (const [cx, cz] of cells) {
-      const d0 = Math.hypot(cx, cz);
-      if (d0 > CITY_R - 3.4) continue;
-      if (Math.hypot(cx - CITY_C.x, cz - CITY_C.z) < 11.5) continue;
-      if (Math.hypot(cx - STADIUM.x, cz - STADIUM.z) < 10.5) continue;
-      if (w.lakeDist(cx, cz) < w.lake.r + 4.5) continue;
-      const ri = w.riverInfo(cx, cz); if (ri.d < ri.hw + 4.5) continue;
-      const rot = Math.floor(r() * 4) * (Math.PI / 2);
-      const dc = Math.hypot(cx - CITY_C.x, cz - CITY_C.z);
-      b.box(7.0, 0.16, 7.0, 0xdcd6c6, cx, baseY - 0.02, cz);
-      if (r() < 0.7) { b.cyl(0.1, 0.14, 1.0, 5, 0x7a5638, cx + 3.1, baseY, cz + 3.1); b.sphere(0.7, 0x4cb85a, cx + 3.1, baseY + 0.9, cz + 3.1); }
-      b.begin(cx, baseY + 0.12, cz, rot, 0.82);   // diperkecil agar tidak menjorok ke jalan kota
-      const pick = r();
-      if (!mosque && d0 > 12 && count > 4) { P.masjid(b); mosque = true; this.occupied.push({ x: cx, z: cz, r: 5.5 }); this.cityObstacles.push({ x: cx, z: cz, r: 4.6 }); }
-      else if (dc < 20 && pick < 0.45) { P.tower(b, { floors: 8 + Math.floor(r() * 9), color: [0xdfe9f1, 0xe8e2d4, 0xd5e4ea][Math.floor(r() * 3)] }); this.occupied.push({ x: cx, z: cz, r: 3.8 }); }
-      else if (pick < 0.62) { P.apartment(b, { wall: P.WALLS[Math.floor(r() * P.WALLS.length)], floors: 4 + Math.floor(r() * 4) }); this.occupied.push({ x: cx, z: cz, r: 4.2 }); }
-      else if (pick < 0.88) { P.ruko(b, { floors: 2 + Math.floor(r() * 2), wall: P.WALLS[Math.floor(r() * P.WALLS.length)], roof: P.ROOFS[Math.floor(r() * P.ROOFS.length)], awning: [0xe0463d, 0x2a8fd6, 0x2fae66, 0xf2a21c][Math.floor(r() * 4)] }); this.occupied.push({ x: cx, z: cz, r: 3.6 }); }
-      else { P.house(b, { wall: P.WALLS[Math.floor(r() * P.WALLS.length)], roof: P.ROOFS[Math.floor(r() * P.ROOFS.length)] }); this.occupied.push({ x: cx, z: cz, r: 3 }); }
-      b.end(); count++;
-    }
-    // Lampu kota & bangku
-    for (let g = -4; g <= 3; g++) {
-      const off = g * step + step / 2;
-      for (let t = -CITY_R + 3; t < CITY_R - 3; t += 7.6) {
-        for (const [x, z] of [[t, off + 1.6], [off + 1.6, t]]) if (Math.hypot(x, z) < CITY_R - 1.5 && this.free(x, z, 0.1) && w.lakeDist(x, z) > w.lake.r + 2) { b.begin(0, baseY, 0, 0); P.lamp(b, x, z); b.end(); }
-      }
-    }
-    // Taman dengan air mancur
-    const park = { x: -9, z: 13 };
-    if (Math.hypot(park.x, park.z) < CITY_R - 5 && w.lakeDist(park.x, park.z) > w.lake.r + 5) {
-      b.begin(park.x, baseY, park.z, 0); P.fountain(b, 2.2); b.end();
-      this.cityObstacles.push({ x: park.x, z: park.z, r: 2.6 });
-      this.occupied.push({ x: park.x, z: park.z, r: 3 });
+    // Lampu & pohon peneduh di cincin taman (sedikit saja)
+    for (let i = 0; i < 20; i++) {
+      const a = (i / 20) * Math.PI * 2;
+      const x = Math.cos(a) * 16.3, z = Math.sin(a) * 16.3;
+      if (w.isWater(x, z)) continue;
+      b.begin(0, baseY, 0, 0); if (i % 2) P.lamp(b, x, z, 2.6); else { b.cyl(0.12, 0.18, 1.2, 5, 0x7a5638, x, 0, z); b.sphere(0.8, 0x45b755, x, 1.1, z); } b.end();
     }
     this.mesh(b);
-    this.cityMeshReady = true;
+    // Lima landmark miniatur, menghadap pusat
+    for (let k = 0; k < 5; k++) {
+      const a = this.heroAngle(k), R = 11.3;
+      const m = buildHeroMini(k);
+      m.scale.setScalar(k === 4 ? 0.3 : 0.4);
+      m.position.set(Math.cos(a) * R, baseY + 0.08, Math.sin(a) * R);
+      m.rotation.y = Math.atan2(-Math.cos(a), -Math.sin(a));
+      m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.group.add(m);
+    }
   }
+
+  // Arah tiap landmark di plaza = arah pulau aslinya di peta (Sumatra ke arah Sumatra, dst.).
+  heroAngle(k) { const h = this.world.heroes[k]; return Math.atan2(h.z, h.x); }
 
   // ------------------------------------------------------------------ KLASTER KOTA & KAMPUNG
   // Tiap petak non-sudut punya plat miniatur di sisi luar yang menempel pada petaknya:

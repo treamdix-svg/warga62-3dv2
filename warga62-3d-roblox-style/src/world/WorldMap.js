@@ -147,7 +147,7 @@ export function createWorld() {
   const crossIdx = Math.round(21.5 * K);
   const C = new THREE.Vector3(sx[crossIdx], 0, sz[crossIdx]);
   world.riverAng = Math.atan2(C.z, C.x);
-  const lake = { x: C.x * 0.3, z: C.z * 0.3, r: 8.4 };
+  const lake = { x: C.x * 0.62, z: C.z * 0.62, r: 5.2 };
   world.lake = lake;
   const river = [];
   const dirOut = new THREE.Vector3(C.x, 0, C.z).normalize();
